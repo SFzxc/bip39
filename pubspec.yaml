@@ -3,6 +3,7 @@ description: Dart implementation of Bitcoin BIP39 Mnemonic code for generating d
 version: 1.0.3
 homepage: https://github.com/anicdh/bip39
 author: anicdh <email@example.com>
+maintainer: Long Hoang <hoangphuocvanlong@gmail.com> (@SFzxc)
 
 environment:
   sdk: '>=2.0.0-dev.58.0 <3.0.0'

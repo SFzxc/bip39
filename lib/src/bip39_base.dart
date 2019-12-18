@@ -7,6 +7,7 @@ import 'utils/pbkdf2.dart';
 import 'wordlists/all.dart';
 
 String _defaultLanguage = "english";
+List<String> _wordList = WORDLIST[_defaultLanguage];
 
 const int _SIZE_BYTE = 255;
 const _INVALID_MNEMONIC = 'Invalid mnemonic';
@@ -39,9 +40,8 @@ Uint8List _randomBytes(int size) {
   return bytes;
 }
 
-String setDefaultWordlist(String language) {
-  _defaultLanguage = language;
-  return _defaultLanguage;
+void setDefaultWordList(String language) {
+  _wordList = WORDLIST[language];
 }
 
 String generateMnemonic({
@@ -75,8 +75,8 @@ String entropyToMnemonic(String entropyString, {String language}) {
       .allMatches(bits)
       .map((match) => match.group(0))
       .toList(growable: false);
-  List<String> wordlist = WORDLIST[language];
-  String words = chunks.map((binary) => wordlist[_binaryToByte(binary)]).join(' ');
+  _wordList = (language == null) ? _wordList : WORDLIST[language];
+  String words = chunks.map((binary) => _wordList[_binaryToByte(binary)]).join(' ');
   return words;
 }
 
@@ -107,21 +107,21 @@ String mnemonicToEntropy(mnemonic, {String language}) {
   if (words.length % 3 != 0) {
     throw new ArgumentError(_INVALID_MNEMONIC);
   }
-  final wordlist = WORDLIST[language];
-    // convert word indices to 11 bit binary strings
-    final bits = words.map((word) {
-      final index = wordlist.indexOf(word);
-      if (index == -1) {
-        throw new ArgumentError(_INVALID_MNEMONIC);
-      }
-      return index.toRadixString(2).padLeft(11, '0');
-    }).join('');
+  _wordList = (language == null) ? _wordList : WORDLIST[language];
+  // convert word indices to 11 bit binary strings
+  final bits = words.map((word) {
+    final index = _wordList.indexOf(word);
+    if (index == -1) {
+      throw new ArgumentError(_INVALID_MNEMONIC);
+    }
+    return index.toRadixString(2).padLeft(11, '0');
+  }).join('');
   // split the binary string into ENT/CS
   final dividerIndex = (bits.length / 33).floor() * 32;
   final entropyBits = bits.substring(0, dividerIndex);
   final checksumBits = bits.substring(dividerIndex);
 
-    // calculate the checksum and compare
+  // calculate the checksum and compare
   final regex = RegExp(r".{1,8}");
   final entropyBytes = Uint8List.fromList(regex
       .allMatches(entropyBits)
