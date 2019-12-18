@@ -6,7 +6,8 @@ import 'package:hex/hex.dart';
 import 'utils/pbkdf2.dart';
 import 'wordlists/all.dart';
 
-const String _defaultLanguage="english";
+String _defaultLanguage = "english";
+
 const int _SIZE_BYTE = 255;
 const _INVALID_MNEMONIC = 'Invalid mnemonic';
 const _INVALID_ENTROPY = 'Invalid entropy';
@@ -22,22 +23,12 @@ String _bytesToBinary(Uint8List bytes) {
   return bytes.map((byte) => byte.toRadixString(2).padLeft(8, '0')).join('');
 }
 
-//Uint8List _createUint8ListFromString( String s ) {
-//  var ret = new Uint8List(s.length);
-//  for( var i=0 ; i<s.length ; i++ ) {
-//    ret[i] = s.codeUnitAt(i);
-//  }
-//  return ret;
-//}
-
-
 String _deriveChecksumBits(Uint8List entropy) {
   final ENT = entropy.length * 8;
   final CS = ENT ~/ 32;
   final hash = sha256.newInstance().convert(entropy);
   return _bytesToBinary(Uint8List.fromList(hash.bytes)).substring(0, CS);
 }
-
 
 Uint8List _randomBytes(int size) {
   final rng = Random.secure();
@@ -47,18 +38,27 @@ Uint8List _randomBytes(int size) {
   }
   return bytes;
 }
+
+String setDefaultWordlist(String language) {
+  _defaultLanguage = language;
+  return _defaultLanguage;
+}
+
 String generateMnemonic({
   int strength = 128,
   RandomBytes randomBytes = _randomBytes,
-  String language=_defaultLanguage
+  String language
 }) {
   assert(strength % 32 == 0);
   final entropy = randomBytes(strength ~/ 8);
-  return entropyToMnemonic(HEX.encode(entropy),language: language);
+  language ??= _defaultLanguage;
+  return entropyToMnemonic(HEX.encode(entropy), language: language);
 }
-String entropyToMnemonic(String entropyString,{String language=_defaultLanguage}) {
+
+String entropyToMnemonic(String entropyString, {String language}) {
+  language ??= _defaultLanguage;
   final entropy = HEX.decode(entropyString);
-  if (entropy.length < 4) {
+  if (entropy.length < 16) {
     throw ArgumentError(_INVALID_ENTROPY);
   }
   if (entropy.length > 32) {
@@ -79,24 +79,30 @@ String entropyToMnemonic(String entropyString,{String language=_defaultLanguage}
   String words = chunks.map((binary) => wordlist[_binaryToByte(binary)]).join(' ');
   return words;
 }
+
 Uint8List mnemonicToSeed(String mnemonic) {
   final pbkdf2 = new PBKDF2();
   return pbkdf2.process(mnemonic);
 }
+
 String mnemonicToSeedHex(String mnemonic) {
   return mnemonicToSeed(mnemonic).map((byte) {
     return byte.toRadixString(16).padLeft(2, '0');
   }).join('');
 }
-bool validateMnemonic(String mnemonic,{String language=_defaultLanguage}) {
+
+bool validateMnemonic(String mnemonic, {String language}) {
+  language ??= _defaultLanguage;
   try {
-    mnemonicToEntropy(mnemonic,language: language);
+    mnemonicToEntropy(mnemonic, language: language);
   } catch (e) {
     return false;
   }
   return true;
 }
-String mnemonicToEntropy (mnemonic,{String language=_defaultLanguage}) {
+
+String mnemonicToEntropy(mnemonic, {String language}) {
+  language ??= _defaultLanguage;
   var words = mnemonic.split(' ');
   if (words.length % 3 != 0) {
     throw new ArgumentError(_INVALID_MNEMONIC);
@@ -121,7 +127,7 @@ String mnemonicToEntropy (mnemonic,{String language=_defaultLanguage}) {
       .allMatches(entropyBits)
       .map((match) => _binaryToByte(match.group(0)))
       .toList(growable: false));
-  if (entropyBytes.length < 4) {
+  if (entropyBytes.length < 16) {
     throw StateError(_INVALID_ENTROPY);
   }
   if (entropyBytes.length > 32) {
@@ -138,8 +144,3 @@ String mnemonicToEntropy (mnemonic,{String language=_defaultLanguage}) {
     return byte.toRadixString(16).padLeft(2, '0');
   }).join('');
 }
-// List<String>> _loadWordList() {
-//   final res = new Resource('package:bip39/src/wordlists/english.json').readAsString();
-//   List<String> words = (json.decode(res) as List).map((e) => e.toString()).toList();
-//   return words;
-// }
